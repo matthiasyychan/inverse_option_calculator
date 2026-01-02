@@ -84,7 +84,7 @@ expiry_labels = {
     for ts in expiries
 }
 
-colA, colB, colC, colD = st.columns([1.2, 1.2, 1.0, 1.0])
+colA, colB, colC = st.columns([1.2, 1.2, 1.0])
 
 with colA:
     expiry_ts = st.selectbox("Expiry", expiries, format_func=lambda ts: expiry_labels[ts])
@@ -153,9 +153,6 @@ F_live = float(ticker.get("underlying_price") or 0.0)
 if F_live <= 0:
     F_live = float(get_btc_index_price())
 
-with colD:
-    st.text_input("Selected Instrument", instrument_name, disabled=True)
-
 index_price = get_btc_index_price()
 
 mark_iv_pct = ticker.get("mark_iv", None)          # % (e.g. 47.1)
@@ -170,8 +167,6 @@ if mark_iv_pct is not None:
     m3.metric("Option Mark IV (%)", f"{float(mark_iv_pct):.2f}")
 if mark_price_btc is not None:
     m4.metric("Deribit Mark Price (BTC)", f"{float(mark_price_btc):.4f}")
-
-st.caption("Forward used for pricing = option ticker underlying_price (Deribit 'Underlying future')")
 
 st.divider()
 
