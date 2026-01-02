@@ -175,83 +175,79 @@ if mark_iv_pct is not None:
 if mark_price is not None:
     m4.metric(f"Deribit Mark Price ({currency})", f"{float(mark_price):.4f}")
 
-st.divider()
-
 # Time to expiry (Deribit uses delivery/expiry at 08:00 UTC in their description,
 # but Deribit API expiration_timestamp already represents the instrument expiry timestamp.
 now_ms = int(time.time() * 1000)
 T_sec = max(0.0, (expiry_ts - now_ms) / 1000.0)
 T_years = T_sec / (365.0 * 24 * 3600)
 
-left, right = st.columns([1.2, 1.0])
+# Calculate and display days, hours, minutes
+days = int(T_sec // (24 * 3600))
+remaining_sec = T_sec % (24 * 3600)
+hours = int(remaining_sec // 3600)
+minutes = int((remaining_sec % 3600) // 60)
 
-with left:
-    # Load Default Data button
-    load_default = st.button("Load Default Data", type="secondary")
+# Determine if quarterly (March, June, September, December)
+expiry_datetime = datetime.fromtimestamp(expiry_ts / 1000, tz=timezone.utc)
+is_quarterly = expiry_datetime.month in [3, 6, 9, 12]
+quarterly_text = " (Quarterly)" if is_quarterly else ""
 
-    # Initialize session state for inputs (empty strings initially)
-    # Reset if currency changed
-    if 'last_currency' not in st.session_state:
-        st.session_state.last_currency = currency
-    if st.session_state.last_currency != currency:
-        st.session_state.forward_price_text = ""
-        st.session_state.iv_text = ""
-        st.session_state.last_currency = currency
+st.metric("Time to Expiry", f"{days}d {hours}h {minutes}m{quarterly_text}")
 
-    if 'forward_price_text' not in st.session_state:
-        st.session_state.forward_price_text = ""
-    if 'iv_text' not in st.session_state:
-        st.session_state.iv_text = ""
+st.divider()
 
-    # Set default values when button is clicked
-    if load_default:
-        default_forward = float(F_live) if F_live > 0 else float(index_price)
-        default_iv = float(mark_iv_pct) if mark_iv_pct is not None else 50.0
-        st.session_state.forward_price_text = f"{default_forward:.2f}"
-        st.session_state.iv_text = f"{default_iv:.2f}"
+# Load Default Data button
+load_default = st.button("Load Default Data", type="secondary")
 
-    forward_text = st.text_input(
-        "Forward price F (editable)",
-        value=st.session_state.forward_price_text,
-        placeholder="Enter forward price"
-    )
-    st.session_state.forward_price_text = forward_text
+# Initialize session state for inputs (empty strings initially)
+# Reset if currency changed
+if 'last_currency' not in st.session_state:
+    st.session_state.last_currency = currency
+if st.session_state.last_currency != currency:
+    st.session_state.forward_price_text = ""
+    st.session_state.iv_text = ""
+    st.session_state.last_currency = currency
 
-    iv_text = st.text_input(
-        "Implied Vol (%)",
-        value=st.session_state.iv_text,
-        placeholder="Enter implied volatility %"
-    )
-    st.session_state.iv_text = iv_text
+if 'forward_price_text' not in st.session_state:
+    st.session_state.forward_price_text = ""
+if 'iv_text' not in st.session_state:
+    st.session_state.iv_text = ""
 
-    # Parse values for calculations
-    try:
-        expected_forward = float(forward_text) if forward_text else None
-    except ValueError:
-        expected_forward = None
-        if forward_text:
-            st.error("Invalid forward price. Please enter a number.")
+# Set default values when button is clicked
+if load_default:
+    default_forward = float(F_live) if F_live > 0 else float(index_price)
+    default_iv = float(mark_iv_pct) if mark_iv_pct is not None else 50.0
+    st.session_state.forward_price_text = f"{default_forward:.2f}"
+    st.session_state.iv_text = f"{default_iv:.2f}"
 
-    try:
-        iv_pct = float(iv_text) if iv_text else None
-    except ValueError:
-        iv_pct = None
-        if iv_text:
-            st.error("Invalid implied volatility. Please enter a number.")
+forward_text = st.text_input(
+    "Forward price F (editable)",
+    value=st.session_state.forward_price_text,
+    placeholder="Enter forward price"
+)
+st.session_state.forward_price_text = forward_text
 
-with right:
-    # Calculate days, hours, minutes
-    days = int(T_sec // (24 * 3600))
-    remaining_sec = T_sec % (24 * 3600)
-    hours = int(remaining_sec // 3600)
-    minutes = int((remaining_sec % 3600) // 60)
+iv_text = st.text_input(
+    "Implied Vol (%)",
+    value=st.session_state.iv_text,
+    placeholder="Enter implied volatility %"
+)
+st.session_state.iv_text = iv_text
 
-    # Determine if quarterly (March, June, September, December)
-    expiry_datetime = datetime.fromtimestamp(expiry_ts / 1000, tz=timezone.utc)
-    is_quarterly = expiry_datetime.month in [3, 6, 9, 12]
-    quarterly_text = " (Quarterly)" if is_quarterly else ""
+# Parse values for calculations
+try:
+    expected_forward = float(forward_text) if forward_text else None
+except ValueError:
+    expected_forward = None
+    if forward_text:
+        st.error("Invalid forward price. Please enter a number.")
 
-    st.write(f"Time to Expiry: {days}d {hours}h {minutes}m{quarterly_text}")
+try:
+    iv_pct = float(iv_text) if iv_text else None
+except ValueError:
+    iv_pct = None
+    if iv_text:
+        st.error("Invalid implied volatility. Please enter a number.")
 
 calc = st.button("Calculate", type="primary")
 
