@@ -274,3 +274,18 @@ if calc:
         r3, r4 = st.columns(2)
         r3.metric("Theoretical Option Value (BTC)", f"{btc_premium_user:.4f}")
         r4.metric("USD Equivalent (using F)", f"{usd_equiv_user:,.2f}")
+
+        st.divider()
+
+        # Difference section
+        btc_diff = btc_premium_user - btc_premium_market
+        usd_diff = usd_equiv_user - usd_equiv_market
+
+        # Calculate percentage differences
+        btc_pct_diff = (btc_diff / btc_premium_market * 100) if btc_premium_market != 0 else 0
+        usd_pct_diff = (usd_diff / usd_equiv_market * 100) if usd_equiv_market != 0 else 0
+
+        st.subheader("Difference")
+        r5, r6 = st.columns(2)
+        r5.metric("Theoretical Option Value (BTC)", f"{btc_diff:.4f}", delta=f"{btc_pct_diff:.2f}%")
+        r6.metric("USD Equivalent (using F)", f"{usd_diff:,.2f}", delta=f"{usd_pct_diff:.2f}%")
