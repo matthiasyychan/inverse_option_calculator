@@ -1,3 +1,7 @@
+Disclaimer:
+This tool is for educational and analytical purposes only.
+Not financial advice.
+
 ## Deribit Inverse Option Calculator (BTC & ETH)
 
 A live option pricing and scenario analysis tool for Deribit inverse options,
