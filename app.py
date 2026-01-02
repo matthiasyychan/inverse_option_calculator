@@ -29,13 +29,14 @@ def get_ticker(instr: str):
 
 
 @st.cache_data(ttl=3)
-def get_btc_index_price():
-    return rpc("public/get_index_price", {"index_name": "btc_usd"})["index_price"]
+def get_index_price(currency: str):
+    index_name = f"{currency.lower()}_usd"
+    return rpc("public/get_index_price", {"index_name": index_name})["index_price"]
 
 
 @st.cache_data(ttl=60)
-def load_btc_option_instruments():
-    inst = rpc("public/get_instruments", {"currency": "BTC", "kind": "option", "expired": False})
+def load_option_instruments(currency: str):
+    inst = rpc("public/get_instruments", {"currency": currency.upper(), "kind": "option", "expired": False})
     out = []
     for x in inst:
         out.append(
@@ -50,9 +51,9 @@ def load_btc_option_instruments():
     return out
 
 
-def deribit_inverse_bs_price_btc(F, K, T, sigma, is_call: bool):
+def deribit_inverse_bs_price(F, K, T, sigma, is_call: bool):
     """
-    Deribit support formula output is in BTC:
+    Deribit inverse option pricing formula (works for BTC and ETH):
       Call: C = N(d1) - (K/F)*N(d2)
       Put : P = (K/F)*N(-d2) - N(-d1)
     """
@@ -73,10 +74,13 @@ def deribit_inverse_bs_price_btc(F, K, T, sigma, is_call: bool):
 
 
 # ---------------- UI ----------------
-st.set_page_config(page_title="Deribit BTC Inverse Option Calculator", layout="wide")
-st.title("Deribit BTC Inverse Option Calculator")
+st.set_page_config(page_title="Deribit Inverse Option Calculator", layout="wide")
+st.title("Deribit Inverse Option Calculator")
 
-instruments = load_btc_option_instruments()
+# Currency selector
+currency = st.selectbox("Select Currency", ["BTC", "ETH"], index=0)
+
+instruments = load_option_instruments(currency)
 
 expiries = sorted({x["expiration_timestamp"] for x in instruments})
 expiry_labels = {
@@ -118,7 +122,7 @@ sample_ticker = get_ticker(sample_instr)
 # Deribit forward (F) for option pricing (this matches the option chain header "Underlying future")
 F_live = float(sample_ticker.get("underlying_price") or 0.0)
 if F_live <= 0:
-    F_live = float(get_btc_index_price())  # fallback
+    F_live = float(get_index_price(currency))  # fallback
 
 # Auto-select ATM strike closest to forward
 if strikes:
@@ -151,22 +155,22 @@ F_live = float(ticker.get("underlying_price") or 0.0)
 
 # Fallback if missing (rare)
 if F_live <= 0:
-    F_live = float(get_btc_index_price())
+    F_live = float(get_index_price(currency))
 
-index_price = get_btc_index_price()
+index_price = get_index_price(currency)
 
 mark_iv_pct = ticker.get("mark_iv", None)          # % (e.g. 47.1)
 underlying_price = ticker.get("underlying_price", None)
-mark_price_btc = ticker.get("mark_price", None)    # BTC premium (inverse option mark)
+mark_price = ticker.get("mark_price", None)    # Premium in selected currency (inverse option mark)
 
 st.caption("Live data")
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("BTC Index (btc_usd)", f"{index_price:,.2f}")
+m1.metric(f"{currency} Index ({currency.lower()}_usd)", f"{index_price:,.2f}")
 m2.metric("Underlying future", f"{F_live:,.2f}")
 if mark_iv_pct is not None:
     m3.metric("Option Mark IV (%)", f"{float(mark_iv_pct):.2f}")
-if mark_price_btc is not None:
-    m4.metric("Deribit Mark Price (BTC)", f"{float(mark_price_btc):.4f}")
+if mark_price is not None:
+    m4.metric(f"Deribit Mark Price ({currency})", f"{float(mark_price):.4f}")
 
 st.divider()
 
@@ -183,6 +187,14 @@ with left:
     load_default = st.button("Load Default Data", type="secondary")
 
     # Initialize session state for inputs (empty strings initially)
+    # Reset if currency changed
+    if 'last_currency' not in st.session_state:
+        st.session_state.last_currency = currency
+    if st.session_state.last_currency != currency:
+        st.session_state.forward_price_text = ""
+        st.session_state.iv_text = ""
+        st.session_state.last_currency = currency
+
     if 'forward_price_text' not in st.session_state:
         st.session_state.forward_price_text = ""
     if 'iv_text' not in st.session_state:
@@ -253,18 +265,18 @@ if calc:
 
         # Calculate using Underlying future from API
         F_market = float(F_live) if F_live > 0 else float(index_price)
-        btc_premium_market = deribit_inverse_bs_price_btc(F=F_market, K=K, T=T_years, sigma=sigma, is_call=is_call)
-        usd_equiv_market = btc_premium_market * F_market
+        premium_market = deribit_inverse_bs_price(F=F_market, K=K, T=T_years, sigma=sigma, is_call=is_call)
+        usd_equiv_market = premium_market * F_market
 
         # Calculate using user-entered Forward price
         F_user = float(expected_forward)
-        btc_premium_user = deribit_inverse_bs_price_btc(F=F_user, K=K, T=T_years, sigma=sigma, is_call=is_call)
-        usd_equiv_user = btc_premium_user * F_user
+        premium_user = deribit_inverse_bs_price(F=F_user, K=K, T=T_years, sigma=sigma, is_call=is_call)
+        usd_equiv_user = premium_user * F_user
 
         # Results using Underlying future
         st.subheader("Results - Underlying future")
         r1, r2 = st.columns(2)
-        r1.metric("Theoretical Option Value (BTC)", f"{btc_premium_market:.4f}")
+        r1.metric(f"Theoretical Option Value ({currency})", f"{premium_market:.4f}")
         r2.metric("USD Equivalent (using F)", f"{usd_equiv_market:,.2f}")
 
         st.divider()
@@ -272,20 +284,20 @@ if calc:
         # Results using user-entered Forward price
         st.subheader("Results - Custom Forward Price")
         r3, r4 = st.columns(2)
-        r3.metric("Theoretical Option Value (BTC)", f"{btc_premium_user:.4f}")
+        r3.metric(f"Theoretical Option Value ({currency})", f"{premium_user:.4f}")
         r4.metric("USD Equivalent (using F)", f"{usd_equiv_user:,.2f}")
 
         st.divider()
 
         # Difference section
-        btc_diff = btc_premium_user - btc_premium_market
+        premium_diff = premium_user - premium_market
         usd_diff = usd_equiv_user - usd_equiv_market
 
         # Calculate percentage differences
-        btc_pct_diff = (btc_diff / btc_premium_market * 100) if btc_premium_market != 0 else 0
+        premium_pct_diff = (premium_diff / premium_market * 100) if premium_market != 0 else 0
         usd_pct_diff = (usd_diff / usd_equiv_market * 100) if usd_equiv_market != 0 else 0
 
         st.subheader("Difference")
         r5, r6 = st.columns(2)
-        r5.metric("Theoretical Option Value (BTC)", f"{btc_diff:.4f}", delta=f"{btc_pct_diff:.2f}%")
+        r5.metric(f"Theoretical Option Value ({currency})", f"{premium_diff:.4f}", delta=f"{premium_pct_diff:.2f}%")
         r6.metric("USD Equivalent (using F)", f"{usd_diff:,.2f}", delta=f"{usd_pct_diff:.2f}%")
