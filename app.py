@@ -169,7 +169,7 @@ m2.metric("Underlying future", f"{F_live:,.2f}")
 if mark_iv_pct is not None:
     m3.metric("Option Mark IV (%)", f"{float(mark_iv_pct):.2f}")
 if mark_price_btc is not None:
-    m4.metric("Deribit Mark Price (BTC)", f"{float(mark_price_btc):.8f}")
+    m4.metric("Deribit Mark Price (BTC)", f"{float(mark_price_btc):.4f}")
 
 st.caption("Forward used for pricing = option ticker underlying_price (Deribit 'Underlying future')")
 
