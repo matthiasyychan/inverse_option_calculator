@@ -165,7 +165,7 @@ mark_price_btc = ticker.get("mark_price", None)    # BTC premium (inverse option
 st.caption("Live data")
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("BTC Index (btc_usd)", f"{index_price:,.2f}")
-m2.metric("Forward (future mark)", f"{F_live:,.2f}")
+m2.metric("Underlying future", f"{F_live:,.2f}")
 if mark_iv_pct is not None:
     m3.metric("Option Mark IV (%)", f"{float(mark_iv_pct):.2f}")
 if mark_price_btc is not None:
@@ -256,7 +256,7 @@ if calc:
         sigma = float(iv_pct) / 100.0
         is_call = (opt_type == "call")
 
-        # Calculate using Forward (future mark) from API
+        # Calculate using Underlying future from API
         F_market = float(F_live) if F_live > 0 else float(index_price)
         btc_premium_market = deribit_inverse_bs_price_btc(F=F_market, K=K, T=T_years, sigma=sigma, is_call=is_call)
         usd_equiv_market = btc_premium_market * F_market
@@ -266,8 +266,8 @@ if calc:
         btc_premium_user = deribit_inverse_bs_price_btc(F=F_user, K=K, T=T_years, sigma=sigma, is_call=is_call)
         usd_equiv_user = btc_premium_user * F_user
 
-        # Results using Forward (future mark)
-        st.subheader("Results (Scenario) - Using Forward (future mark)")
+        # Results using Underlying future
+        st.subheader("Results - Underlying future")
         r1, r2 = st.columns(2)
         r1.metric("Theoretical Option Value (BTC)", f"{btc_premium_market:.4f}")
         r2.metric("USD Equivalent (using F)", f"{usd_equiv_market:,.2f}")
@@ -280,7 +280,7 @@ if calc:
         st.divider()
 
         # Results using user-entered Forward price
-        st.subheader("Results (Scenario) - Using Custom Forward Price")
+        st.subheader("Results - Custom Forward Price")
         r3, r4 = st.columns(2)
         r3.metric("Theoretical Option Value (BTC)", f"{btc_premium_user:.4f}")
         r4.metric("USD Equivalent (using F)", f"{usd_equiv_user:,.2f}")
