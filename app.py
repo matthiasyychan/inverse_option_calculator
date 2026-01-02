@@ -221,7 +221,7 @@ if load_default:
     st.session_state.iv_text = f"{default_iv:.2f}"
 
 forward_text = st.text_input(
-    "Forward price F (editable)",
+    "Forward price F",
     value=st.session_state.forward_price_text,
     placeholder="Enter forward price"
 )
