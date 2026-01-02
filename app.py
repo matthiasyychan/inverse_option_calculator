@@ -252,20 +252,35 @@ if calc:
     elif iv_pct is None or iv_pct <= 0:
         st.error("Please enter a valid Implied Vol % (must be > 0)")
     else:
-        F = float(expected_forward)
         K = float(strike)
         sigma = float(iv_pct) / 100.0
         is_call = (opt_type == "call")
 
-        btc_premium_per_contract = deribit_inverse_bs_price_btc(F=F, K=K, T=T_years, sigma=sigma, is_call=is_call)
-        usd_equiv = btc_premium_per_contract * F
+        # Calculate using Forward (future mark) from API
+        F_market = float(F_live) if F_live > 0 else float(index_price)
+        btc_premium_market = deribit_inverse_bs_price_btc(F=F_market, K=K, T=T_years, sigma=sigma, is_call=is_call)
+        usd_equiv_market = btc_premium_market * F_market
 
-        st.subheader("Results (Scenario)")
+        # Calculate using user-entered Forward price
+        F_user = float(expected_forward)
+        btc_premium_user = deribit_inverse_bs_price_btc(F=F_user, K=K, T=T_years, sigma=sigma, is_call=is_call)
+        usd_equiv_user = btc_premium_user * F_user
+
+        # Results using Forward (future mark)
+        st.subheader("Results (Scenario) - Using Forward (future mark)")
         r1, r2 = st.columns(2)
-        r1.metric("Theoretical Option Value (BTC)", f"{btc_premium_per_contract:.4f}")
-        r2.metric("USD Equivalent (using F)", f"{usd_equiv:,.2f}")
+        r1.metric("Theoretical Option Value (BTC)", f"{btc_premium_market:.4f}")
+        r2.metric("USD Equivalent (using F)", f"{usd_equiv_market:,.2f}")
 
         if mark_price_btc is not None:
             deribit_mark = float(mark_price_btc)
             st.info(f"Deribit mark price (BTC) for {instrument_name}: {deribit_mark:.8f}")
-            st.write(f"Difference (theo - mark): {(btc_premium_per_contract - deribit_mark):.8f} BTC")
+            st.write(f"Difference (theo - mark): {(btc_premium_market - deribit_mark):.8f} BTC")
+
+        st.divider()
+
+        # Results using user-entered Forward price
+        st.subheader("Results (Scenario) - Using Custom Forward Price")
+        r3, r4 = st.columns(2)
+        r3.metric("Theoretical Option Value (BTC)", f"{btc_premium_user:.4f}")
+        r4.metric("USD Equivalent (using F)", f"{usd_equiv_user:,.2f}")
