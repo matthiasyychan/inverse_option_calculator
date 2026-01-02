@@ -6,7 +6,10 @@ import time
 import requests
 import streamlit as st
 from datetime import datetime, timezone
-from scipy.stats import norm
+
+def N(x: float) -> float:
+    """Standard normal CDF using the error function (no SciPy needed)."""
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
 
 DERIBIT_HTTP = "https://www.deribit.com/api/v2"  # switch to https://test.deribit.com/api/v2 for testnet
 
@@ -68,9 +71,9 @@ def deribit_inverse_bs_price(F, K, T, sigma, is_call: bool):
     d2 = d1 - sigma * math.sqrt(T)
 
     if is_call:
-        return norm.cdf(d1) - (K / F) * norm.cdf(d2)
+        return N(d1) - (K / F) * N(d2)
     else:
-        return (K / F) * norm.cdf(-d2) - norm.cdf(-d1)
+        return (K / F) * N(-d2) - N(-d1)
 
 
 # ---------------- UI ----------------
