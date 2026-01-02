@@ -20,7 +20,6 @@ using forward-based Black-Scholes (Black-76) pricing.
 - Python
 - Streamlit
 - Deribit Public API
-- SciPy
 
 ### Notes
 - Uses Deribit `underlying_price` as forward (F)
