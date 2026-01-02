@@ -272,11 +272,6 @@ if calc:
         r1.metric("Theoretical Option Value (BTC)", f"{btc_premium_market:.4f}")
         r2.metric("USD Equivalent (using F)", f"{usd_equiv_market:,.2f}")
 
-        if mark_price_btc is not None:
-            deribit_mark = float(mark_price_btc)
-            st.info(f"Deribit mark price (BTC) for {instrument_name}: {deribit_mark:.8f}")
-            st.write(f"Difference (theo - mark): {(btc_premium_market - deribit_mark):.8f} BTC")
-
         st.divider()
 
         # Results using user-entered Forward price
